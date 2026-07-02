@@ -1,0 +1,19 @@
+# Python environment & cache
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment Variables (NEVER commit your API keys)
+.env
+
+# SQLite Database file (The DB is generated locally, not stored in Git)
+*.db
+*.sqlite3
+
+# IDE settings
+.vscode/
+.idea/
+
+# Docker (Optional for now, but good practice)
+*.log
