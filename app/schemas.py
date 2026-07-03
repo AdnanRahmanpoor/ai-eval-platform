@@ -34,7 +34,14 @@ class DatasetRead(DatasetBase):
     model_config = ConfigDict(from_attributes=True)
 
 class DatasetItemCreate(BaseModel):
+    input_data: Dict[str, Any]
+    expected_output: Dict[str, Any]
+    extra_info: Optional[Dict[str, Any]] = None
+
+class DatasetItemRead(BaseModel):
+    id: UUID
     dataset_id: UUID
     input_data: Dict[str, Any]
     expected_output: Dict[str, Any]
-    metadata: Optional[Dict[str, Any]] = None
+    extra_info: Optional[Dict[str, Any]] = None
+    model_config = ConfigDict(from_attributes = True)
