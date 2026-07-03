@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, Dict, Any, List
 from uuid import UUID
 from datetime import datetime
@@ -45,3 +45,12 @@ class DatasetItemRead(BaseModel):
     expected_output: Dict[str, Any]
     extra_info: Optional[Dict[str, Any]] = None
     model_config = ConfigDict(from_attributes = True)
+
+# Evaluation Schemas
+class EvalRequest(BaseModel):
+    criteria: str = Field(..., description = "The specific rubric or instruction for the judge.")
+    text_to_grade: str = Field(..., description = "The raw output from the AI agent/prompt being evaluated.")
+
+class EvalResult(BaseModel):
+    score: int = Field(ge=1, le=5, description="An integer score from 1 (terrible) to 5 (perfect).")
+    reasoning: str = Field(..., description="A concise, 1-2 sentence explanation of the score.")

@@ -1,15 +1,40 @@
+import sys
+
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.database import create_db_and_tables
 from app.api.v1.router import api_router
 from app.config import settings
+from app.core.llm_client import check_llm_health
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(messages)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Starting up... Creating database tables.") # on startup
+    # startup
+    logger.info("Starting up AI Eval Platform...")
+    # init db
     create_db_and_tables()
+    # check LLM connectivity
+    is_healthy = await check_llm_health()
+    if not is_healthy:
+        logger.critical("DeepSeek API connection failed. Check your API keys and credits. Shutting down.")
+        raise RuntimeError("LLM Health Check Failed")
+    
+    logger.info("System ready.")
     yield
-    print("Shutting down...") # on shutdown
+    
+    # Shutdown
+    logger.info("Shutting down AI Eval Platform...")
 
 app = FastAPI(
     title = settings.APP_NAME,
@@ -20,6 +45,6 @@ app = FastAPI(
 
 app.include_router(api_router, prefix="/api/v1")
 
-@app.get("/")
+@app.get("/", tags=["Health"])
 def read_root():
-    return {"message": f"Welcome to the {settings.APP_NAME} API. Visit /docs for Swagger UI."}
+    return {"status": "healthy","message": f"Welcome to the {settings.APP_NAME} API. Visit /docs for Swagger UI."}
