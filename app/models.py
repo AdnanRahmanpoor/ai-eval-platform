@@ -27,3 +27,23 @@ class DatasetItem(SQLModel, table=True):
     expected_output: dict = Field(sa_column=Column(JSON))
     # avoid clashing with SQLAlchemy DeclarativeMeta.metadata by renaming
     extra_info: Optional[dict] = Field(default=None, sa_column=Column("metadata", JSON))
+
+class Experiment(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    prompt_id: uuid.UUID = Field(foreign_key="prompt.id")
+    dataset_id: uuid.UUID = Field(foreign_key="dataset.id")
+    criteria: str
+    status: str = Field(default="PENDING", index=True) # PENDING, RUNNING, COMPLETED, FAILED
+    avg_score: Optional[float] = None
+    total_items: int = 0
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class EvalRun(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    experiment_id: uuid.UUID = Field(foreign_key="experiment.id", index=True)
+    dataset_item_id: uuid.UUID = Field(foreign_key="datasetitem.id")
+    generated_output: str
+    judge_score: Optional[int] = None
+    judge_reasoning: Optional[int] = None
+    latency_ms: Optional[int] = None # API speed
+    created_at: datetime = Field(default_factory=datetime.utcnow)
