@@ -54,3 +54,30 @@ class EvalRequest(BaseModel):
 class EvalResult(BaseModel):
     score: int = Field(ge=1, le=5, description="An integer score from 1 (terrible) to 5 (perfect).")
     reasoning: str = Field(..., description="A concise, 1-2 sentence explanation of the score.")
+
+class ExperimentCreate(BaseModel):
+    prompt_id: UUID
+    dataset_id: UUID
+    criteria: str = Field(..., description="The specific rubric for the judge to use on this dataset.")
+
+class ExperimentRead(BaseModel):
+    id: UUID
+    prompt_id: UUID
+    dataset_id: UUID
+    criteria: str
+    status: str
+    avg_score: Optional[float] = None
+    total_items: int
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+class EvalRunRead(BaseModel):
+    id: UUID
+    experiment_id: UUID
+    dataset_item_id: UUID
+    generated_output: str
+    judge_score: Optional[int] = None
+    judge_reasoning: Optional[str] = None
+    latency_ms: Optional[int] = None
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)

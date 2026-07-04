@@ -7,6 +7,7 @@ from app.api.v1.router import api_router
 from app.config import settings
 from app.core.llm_client import check_llm_health
 import logging
+import sys
 
 logging.basicConfig(
     level=logging.INFO,
@@ -14,8 +15,10 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+for noisy_logger in ["httpx", "sqlalchemy.engine", "sqlalchemy.pool", "openai"]:
+    logging.getLogger(noisy_logger).setLevel(logging.WARNING)
+    logging.getLogger(noisy_logger).propagate = False 
+    
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
