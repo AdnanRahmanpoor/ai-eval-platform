@@ -49,6 +49,7 @@ class DatasetItemRead(BaseModel):
 # Evaluation Schemas
 class EvalRequest(BaseModel):
     criteria: str = Field(..., description = "The specific rubric or instruction for the judge.")
+    original_input: dict = Field(..., description = "The raw input data given to the LLM.")
     text_to_grade: str = Field(..., description = "The raw output from the AI agent/prompt being evaluated.")
 
 class EvalResult(BaseModel):
@@ -59,6 +60,7 @@ class ExperimentCreate(BaseModel):
     prompt_id: UUID
     dataset_id: UUID
     criteria: str = Field(..., description="The specific rubric for the judge to use on this dataset.")
+    baseline_experiment_id: Optional[UUID] = None
 
 class ExperimentRead(BaseModel):
     id: UUID
@@ -81,3 +83,11 @@ class EvalRunRead(BaseModel):
     latency_ms: Optional[int] = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+class RegressionCheckResponse(BaseModel):
+    current_score: float
+    baseline_score: float
+    score_difference: float
+    drop_percentage: float
+    is_regression: bool
+    message: str
