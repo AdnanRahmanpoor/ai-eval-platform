@@ -1,6 +1,7 @@
 import sys
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from contextlib import asynccontextmanager
 from app.database import create_db_and_tables
 from app.api.v1.router import api_router
@@ -8,7 +9,6 @@ from app.api.v1 import dashboard
 from app.config import settings
 from app.core.llm_client import check_llm_health
 import logging
-import sys
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,6 +51,6 @@ app.include_router(api_router, prefix="/api/v1")
 
 app.include_router(dashboard.router)
 
-@app.get("/", tags=["Health"])
+@app.get("/", include_in_schema=False)
 def read_root():
-    return {"status": "healthy","message": f"Welcome to the {settings.APP_NAME} API. Visit /docs for Swagger UI."}
+    return RedirectResponse(url="/dashboard")
