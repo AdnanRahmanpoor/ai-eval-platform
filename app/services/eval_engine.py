@@ -6,6 +6,7 @@ from app.database import engine
 from app.models import Experiment, EvalRun, Prompt, DatasetItem
 from app.core.llm_client import llm_client
 from app.core.judge import run_judge
+from app.core.telegram import send_telegram_alert
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -89,7 +90,32 @@ async def execute_experiment(experiment_id: uuid.UUID):
         experiment.avg_score = sum(scores) / len(scores) if scores else 0.0
         experiment.status = "COMPLETED"
 
+        # 6. Regression Detection
+        if experiment.baseline_experiment_id:
+            baseline = session.get(Experiment, experiment.baseline_experiment_id)
+            if baseline and baseline.avg_score is not None:
+                if experiment.avg_score < baseline.avg_score:
+                    experiment.is_regression = True
+                    logger.warning(f"REGRESSION DETECTED! Score dropped from {baseline.avg_score} to {experiment.avg_score}")
+
+                    # Telegram alert
+                    drop_pct = ((baseline.avg_score - experiment.avg_score) / baseline.avg_score) * 100
+                    alert_msg = (
+                        f"🚨 AI REGRESSION DETECTED 🚨\n\n"
+                        f"📉 Experiment ID: {experiment.id}\n"
+                        f"📊 Baseline Score: {baseline.avg_score:.2f}\n"
+                        f"📉 Current Score: {experiment.avg_score:.2f}\n"
+                        f"🔻 Drop: {drop_pct:.2f}%\n\n"
+                        f"⚠️ Criteria: {experiment.criteria[:50]}...\n\n"
+                        f"🔗 Dashboard: https://eval.adnanrp.com/dashboard"
+                    )
+                    await send_telegram_alert(alert_msg)
+
+                else:
+                    experiment.is_regression = False
+                    logger.info("No regression. Performance maintained or improved.")
+
         session.add(experiment)
         session.commit()
         logger.info(f"Experiment {experiment_id} COMPLETED. Avg Score: {experiment.avg_score:.2f}")
-                
+        
