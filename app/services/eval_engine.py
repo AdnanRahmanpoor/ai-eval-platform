@@ -43,7 +43,12 @@ async def execute_experiment(experiment_id: uuid.UUID):
         for item in items:
             try:
                 # 1. Render prompt
-                rendered_prompt = prompt.template.format(**item.input_data)
+                input_dict = item.input_data
+
+                if isinstance(input_dict, str):
+                    input_dict = json.loads(input_dict)
+
+                rendered_prompt = prompt.template.format(**input_dict)
 
                 start_time = time.time()
 
@@ -56,7 +61,7 @@ async def execute_experiment(experiment_id: uuid.UUID):
                 latency_ms = int((time.time() - start_time) * 1000)
 
                 # 3. call the llm judge
-                judge_result = await run_judge(experiment.criteria, generated_text)
+                judge_result = await run_judge(experiment.criteria, input_dict, generated_text)
 
                 # 4. save individual run to db
                 eval_run = EvalRun(
