@@ -52,3 +52,13 @@ def render_dashboard(request: Request, session: Session = Depends(get_session)):
             "regressions": regressions
         }
     )
+
+@router.get("/run", response_class = HTMLResponse)
+def render_run_page(request: Request):
+    """Serves the Evaluation Runner UI"""
+    return templates.TemplateResponse("run.html", {"request": request})
+
+@router.get("/experiment/{experiment_id}", response_class = HTMLResponse)
+def render_experiment_detail(request: Request, experiment_id: str):
+    """Serves the Experiment Detail UI"""
+    return templates.TemplateResponse("experiment.html", {"request": request, "exp_id": experiment_id})

@@ -1,0 +1,109 @@
+<!-- templates/run.html -->
+{% extends "base.html" %}
+{% block title %}Run Evaluation{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <h1 class="text-3xl font-bold text-white mb-2">Run New Evaluation</h1>
+    <p class="text-gray-400 mb-8">Select a prompt and dataset to test. Optionally compare against a baseline to detect regressions.</p>
+
+    <div class="bg-gray-800 rounded-lg border border-gray-700 p-6">
+        <form id="evalForm" class="space-y-6">
+            <!-- Prompt Dropdown -->
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Prompt Version</label>
+                <select id="prompt_id" required class="w-full bg-gray-700 border border-gray-600 rounded-lg text-white px-4 py-2 focus:ring-2 focus:ring-blue-500">
+                    <option value="">Loading prompts...</option>
+                </select>
+            </div>
+
+            <!-- Dataset Dropdown -->
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Golden Dataset</label>
+                <select id="dataset_id" required class="w-full bg-gray-700 border border-gray-600 rounded-lg text-white px-4 py-2 focus:ring-2 focus:ring-blue-500">
+                    <option value="">Loading datasets...</option>
+                </select>
+            </div>
+
+            <!-- Criteria -->
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Evaluation Criteria (Rubric)</label>
+                <textarea id="criteria" rows="3" required placeholder="e.g., Evaluate if the sentiment correctly identifies whether the news is Bullish or Bearish. Score 1 to 5." 
+                    class="w-full bg-gray-700 border border-gray-600 rounded-lg text-white px-4 py-2 focus:ring-2 focus:ring-blue-500"></textarea>
+            </div>
+
+            <!-- Baseline Dropdown (Optional) -->
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Baseline Experiment (Optional)</label>
+                <select id="baseline_id" class="w-full bg-gray-700 border border-gray-600 rounded-lg text-white px-4 py-2 focus:ring-2 focus:ring-blue-500">
+                    <option value="">None (No regression check)</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">If selected, the system will mathematically compare the new score against this baseline.</p>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">
+                🚀 Start Evaluation
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // 1. Fetch data to populate dropdowns on page load
+    async function loadDropdowns() {
+        const [promptsRes, datasetsRes, expRes] = await Promise.all([
+            fetch('/api/v1/prompts/'),
+            fetch('/api/v1/datasets/'),
+            fetch('/api/v1/evals/experiments')
+        ]);
+        
+        const prompts = await promptsRes.json();
+        const datasets = await datasetsRes.json();
+        const experiments = await expRes.json();
+
+        // Populate Prompts
+        const promptSelect = document.getElementById('prompt_id');
+        promptSelect.innerHTML = prompts.map(p => `<option value="${p.id}">${p.name} (v${p.version})</option>`).join('');
+
+        // Populate Datasets
+        const datasetSelect = document.getElementById('dataset_id');
+        datasetSelect.innerHTML = datasets.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+
+        // Populate Baselines (Only completed experiments)
+        const baselineSelect = document.getElementById('baseline_id');
+        const completedExps = experiments.filter(e => e.status === 'COMPLETED');
+        baselineSelect.innerHTML = '<option value="">None (No regression check)</option>' + 
+            completedExps.map(e => `<option value="${e.id}">Exp: ${e.id.substring(0,8)}... (Score: ${e.avg_score})</option>`).join('');
+    }
+
+    // 2. Handle Form Submission
+    document.getElementById('evalForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const payload = {
+            prompt_id: document.getElementById('prompt_id').value,
+            dataset_id: document.getElementById('dataset_id').value,
+            criteria: document.getElementById('criteria').value
+        };
+
+        const baselineVal = document.getElementById('baseline_id').value;
+        if (baselineVal) payload.baseline_experiment_id = baselineVal;
+
+        const res = await fetch('/api/v1/evals/run', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            // Redirect to the experiment detail page
+            window.location.href = `/experiment/${data.id}`;
+        } else {
+            alert("Error starting evaluation. Check API logs.");
+        }
+    });
+
+    loadDropdowns();
+</script>
+{% endblock %}

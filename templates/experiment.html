@@ -1,0 +1,135 @@
+<!-- templates/experiment.html -->
+{% extends "base.html" %}
+{% block title %}Experiment Results{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <h1 class="text-3xl font-bold text-white mb-2">Experiment Details</h1>
+    <p class="text-gray-400 mb-8">Tracking ID: <span id="expId" class="font-mono text-blue-400"></span></p>
+
+    <!-- Status Card -->
+    <div id="statusCard" class="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8 text-center">
+        <div id="loadingState" class="space-y-4">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+            <p class="text-xl text-white">AI Agents are evaluating the dataset...</p>
+            <p class="text-gray-400 text-sm">This page will automatically update when finished.</p>
+        </div>
+        
+        <div id="completedState" class="hidden">
+            <!-- Filled by JS -->
+        </div>
+    </div>
+
+    <!-- Analytics Card (Hidden until loaded) -->
+    <div id="analyticsCard" class="hidden bg-gray-800 rounded-lg border border-red-900/50 p-6 mb-8">
+        <!-- Filled by JS -->
+    </div>
+
+    <!-- Runs Table (Hidden until loaded) -->
+    <div id="runsCard" class="hidden bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+        <div class="p-4 border-b border-gray-700">
+            <h2 class="text-xl font-bold text-white">Granular Evaluation Runs</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-700">
+                <thead class="bg-gray-900">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Generated Output</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Judge Score</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Reasoning</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Latency</th>
+                    </tr>
+                </thead>
+                <tbody id="runsTableBody" class="bg-gray-800 divide-y divide-gray-700">
+                    <!-- Filled by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const expId = window.location.pathname.split('/').pop();
+    document.getElementById('expId').innerText = expId;
+
+    // 1. Poll the API every 2 seconds
+    async function pollStatus() {
+        const res = await fetch(`/api/v1/evals/experiments/${expId}`);
+        const data = await res.json();
+
+        if (data.status === 'COMPLETED' || data.status === 'FAILED') {
+            renderCompletion(data);
+            loadRuns();
+            if (data.baseline_experiment_id) loadAnalytics();
+        } else {
+            setTimeout(pollStatus, 2000); // Poll again in 2 seconds
+        }
+    }
+
+    // 2. Render the final summary
+    function renderCompletion(data) {
+        document.getElementById('loadingState').classList.add('hidden');
+        const state = document.getElementById('completedState');
+        state.classList.remove('hidden');
+        
+        const statusColor = data.status === 'COMPLETED' ? 'text-green-400' : 'text-red-400';
+        state.innerHTML = `
+            <p class="text-4xl font-bold ${statusColor} mb-2">${data.status}</p>
+            <p class="text-2xl text-white">Average Score: <span class="text-blue-400">${data.avg_score.toFixed(2)}</span></p>
+            <p class="text-gray-400">Evaluated ${data.total_items} items.</p>
+        `;
+    }
+
+    // 3. Load Analytics if baseline exists
+    async function loadAnalytics() {
+        const res = await fetch(`/api/v1/evals/experiments/${expId}/analytics`);
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        const card = document.getElementById('analyticsCard');
+        card.classList.remove('hidden');
+        
+        const isReg = data.is_regression;
+        card.className = `bg-gray-800 rounded-lg border p-6 mb-8 ${isReg ? 'border-red-900/50' : 'border-green-900/50'}`;
+        
+        card.innerHTML = `
+            <h2 class="text-xl font-bold ${isReg ? 'text-red-400' : 'text-green-400'} mb-4">${data.message}</h2>
+            <div class="grid grid-cols-3 gap-4 text-center">
+                <div>
+                    <p class="text-gray-400 text-sm">Baseline Score</p>
+                    <p class="text-2xl font-bold text-white">${data.baseline_score.toFixed(2)}</p>
+                </div>
+                <div>
+                    <p class="text-gray-400 text-sm">Current Score</p>
+                    <p class="text-2xl font-bold text-white">${data.current_score.toFixed(2)}</p>
+                </div>
+                <div>
+                    <p class="text-gray-400 text-sm">Drop Percentage</p>
+                    <p class="text-2xl font-bold ${isReg ? 'text-red-400' : 'text-green-400'}">${data.drop_percentage.toFixed(1)}%</p>
+                </div>
+            </div>
+        `;
+    }
+
+    // 4. Load Granular Runs
+    async function loadRuns() {
+        const res = await fetch(`/api/v1/evals/experiments/${expId}/runs`);
+        const runs = await res.json();
+        
+        document.getElementById('runsCard').classList.remove('hidden');
+        const tbody = document.getElementById('runsTableBody');
+        
+        tbody.innerHTML = runs.map(run => `
+            <tr>
+                <td class="px-4 py-3 text-sm text-gray-300 max-w-xs truncate">${run.generated_output}</td>
+                <td class="px-4 py-3 text-sm font-bold ${run.judge_score <= 2 ? 'text-red-400' : 'text-green-400'}">${run.judge_score}/5</td>
+                <td class="px-4 py-3 text-sm text-gray-400 max-w-xs truncate">${run.judge_reasoning}</td>
+                <td class="px-4 py-3 text-sm text-gray-500">${run.latency_ms}ms</td>
+            </tr>
+        `).join('');
+    }
+
+    // Start polling immediately
+    pollStatus();
+</script>
+{% endblock %}

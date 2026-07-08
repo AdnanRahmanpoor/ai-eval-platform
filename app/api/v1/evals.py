@@ -103,3 +103,9 @@ def get_regression_analytics(experiment_id: UUID, session: Session = Depends(get
         is_regression = is_reg,
         message = message
     )
+
+@router.get("/experiments", response_model = List[ExperimentRead])
+def get_experiments(session: Session = Depends(get_session)):
+    """Retrieves a list of all experiments for dropdowns."""
+    statement = select(Experiment).order_by(Experiment.created_at.desc())
+    return session.exec(statement).all()
