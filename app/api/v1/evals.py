@@ -3,7 +3,7 @@ from sqlmodel import Session, select
 from app.database import get_session
 from app.models import Experiment, EvalRun, Prompt, Dataset
 from app.schemas import EvalRequest, EvalResult, ExperimentCreate, ExperimentRead, EvalRunRead, RegressionCheckResponse
-from app.services.eval_engine import execute_experiment
+from app.services.eval_engine import execute_experiment_task
 from app.core.judge import run_judge
 from uuid import UUID
 from typing import List
@@ -26,7 +26,7 @@ async def test_judge_endpoint(req: EvalRequest):
         raise HTTPException(status_code=500, detail="An unexpected server error occured.")
     
 @router.post("/run", response_model=ExperimentRead, status_code=202)
-async def trigger_experiment(req: ExperimentCreate,  background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
+async def trigger_experiment(req: ExperimentCreate, session: Session = Depends(get_session)):
     """
     Triggers a batch evaluation. Creates the DB record, hand the heavy lifting to BackgroundTasks, and immediately returns.
     """
@@ -41,10 +41,9 @@ async def trigger_experiment(req: ExperimentCreate,  background_tasks: Backgroun
     session.commit()
     session.refresh(db_experiment)
 
-    # hand the async function to FastAPI's background queue
-    background_tasks.add_task(execute_experiment, db_experiment.id)
+    execute_experiment_task.delay(db_experiment.id)
 
-    logger.info(f"Queued Experiment {db_experiment.id} for background execution.")
+    logger.info(f"Queued Experiment {db_experiment.id} to Redis/Celery")
     return db_experiment
 
 @router.get("/experiments/{experiment_id}", response_model=ExperimentRead)
