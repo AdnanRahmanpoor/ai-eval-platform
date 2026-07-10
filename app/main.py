@@ -10,6 +10,9 @@ from app.config import settings
 from app.core.llm_client import check_llm_health
 import logging
 
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from app.core.tracing import setup_observalibility
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(messages)s",
@@ -21,6 +24,8 @@ for noisy_logger in ["httpx", "sqlalchemy.engine", "sqlalchemy.pool", "openai"]:
     logging.getLogger(noisy_logger).propagate = False 
     
 logger = logging.getLogger(__name__)
+
+setup_observalibility()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,6 +51,8 @@ app = FastAPI(
     version = "1.0.0",
     lifespan = lifespan
 )
+
+FastAPIInstrumentor.instrument_app(app)
 
 app.include_router(api_router, prefix="/api/v1")
 

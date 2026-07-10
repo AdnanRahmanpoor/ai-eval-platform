@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: eval_postgres
+    environment:
+      POSTGRES_USER: eval_user
+      POSTGRES_PASSWORD: eval_password
+      POSTGRES_DB: eval_platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eval_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: eval_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    container_name: eval_jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686" # jaeger webui
+      - "4317:4317" # OTLP gRPC receiver
+
+volumes:
+  postgres_data:

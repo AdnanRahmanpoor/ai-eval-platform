@@ -14,3 +14,10 @@ psycopg2-binary==2.9.12
 redis==7.1.0
 sqlalchemy[asyncio]==2.0.45
 celery==5.5.3
+opentelemetry-instrumentation-celery==0.64b0
+opentelemetry-instrumentation-fastapi==0.64b0
+opentelemetry-instrumentation-httpx==0.64b0
+opentelemetry-instrumentation-sqlalchemy==0.64b0
+opentelemetry-exporter-otlp==1.43.0
+opentelemetry-api==1.43.0
+opentelemetry-sdk==1.43.0
