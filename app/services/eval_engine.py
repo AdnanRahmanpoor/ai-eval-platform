@@ -83,6 +83,7 @@ async def execute_experiment(experiment_id: uuid.UUID):
             except KeyError as ke:
                 logger.warning(f"Prompt variable mismatch on item {item.id}: {ke}")
             except Exception as e:
+                session.rollback()
                 logger.error(f"Error evaluating item {item.id}: {e}")
 
         # 5. Finalize Metrics

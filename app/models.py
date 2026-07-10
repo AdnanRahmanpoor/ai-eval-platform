@@ -3,6 +3,7 @@ from sqlalchemy import JSON, Column
 from typing import Optional, List
 from datetime import datetime
 import uuid
+from sqlalchemy.dialects.postgresql import JSONB
 
 class Prompt(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -46,6 +47,7 @@ class EvalRun(SQLModel, table=True):
     dataset_item_id: uuid.UUID = Field(foreign_key="datasetitem.id")
     generated_output: str
     judge_score: Optional[int] = None
-    judge_reasoning: Optional[int] = None
+    judge_reasoning: Optional[str] = None
     latency_ms: Optional[int] = None # API speed
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    raw_llm_telemetry: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
