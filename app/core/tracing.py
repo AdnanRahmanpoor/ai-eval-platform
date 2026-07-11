@@ -1,3 +1,4 @@
+import os
 import logging
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
@@ -16,13 +17,19 @@ def setup_observalibility():
 	resource = Resource.create({"service.name": "ai-eval-platform"})
 	provider = TracerProvider(resource = resource)
 
-	# config OTLP exporter to send traces to jaeger
-	try:
-		otlp_exporter = OTLPSpanExporter(endpoint = "http://localhost:4317", insecure = True)
-		provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
-		logger.info("OpenTelemetry configured. Sending traces to Jaeger.")
-	except Exception as e:
-		logger.warning(f"Could not connect to Jaeger OTLP endpoint: {e}")
+	otlp_endpoint = os.getenv("OTEL_ENDPOINT")
+
+	if otlp_endpoint:
+		# config OTLP exporter to send traces to jaeger
+		try:
+			otlp_exporter = OTLPSpanExporter(endpoint = "http://localhost:4317", insecure = True)
+			provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
+			logger.info("OpenTelemetry configured. Sending traces to Jaeger.")
+		except Exception as e:
+			logger.warning(f"Could not connect to Jaeger OTLP endpoint: {e}")
+	else:
+		logger.info("ℹ️ OTEL_ENDPOINT not set. Distributed tracing disabled (Console export only).")
+
 
 	trace.set_tracer_provider(provider)
 
