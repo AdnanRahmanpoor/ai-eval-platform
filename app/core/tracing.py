@@ -22,7 +22,7 @@ def setup_observalibility():
 	if otlp_endpoint:
 		# config OTLP exporter to send traces to jaeger
 		try:
-			otlp_exporter = OTLPSpanExporter(endpoint = "http://localhost:4317", insecure = True)
+			otlp_exporter = OTLPSpanExporter(endpoint = otlp_endpoint, insecure = True)
 			provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
 			logger.info("OpenTelemetry configured. Sending traces to Jaeger.")
 		except Exception as e:
