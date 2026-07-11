@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     TELEGRAM_BOT_TOKEN: Optional[str] = None
     TELEGRAM_CHAT_ID: Optional[str] = None
+    OTEL_ENDPOINT: Optional[str] = None
 
     # pydantic config to load from .env
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
